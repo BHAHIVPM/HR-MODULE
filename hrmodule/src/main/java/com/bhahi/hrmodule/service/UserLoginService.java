@@ -38,7 +38,7 @@ public class UserLoginService{
         ResponseMessage<UserLogin> response=new ResponseMessage<>();
         try{
             Optional<UserLogin> login=userLoginRepo.findByUserCode(loginId);
-            response.setResponseOutput(login.get());
+            login.ifPresent(response::setResponseOutput);
             response.setHeader("Succeess");
             response.setMessage("The user data is inserted successfully.");
             response.setStatusCode(200);
