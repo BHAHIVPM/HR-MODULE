@@ -1,4 +1,4 @@
-package exception;
+package com.bhahi.hr.exception;
 
 import lombok.Getter;
 
@@ -14,12 +14,12 @@ public class CustomException extends RuntimeException {
         return message;
     }
 
-    CustomException(String header, String message, int statusCode){
+    public CustomException(String header, String message, int statusCode){
         this.header=header;
         this.message=message;
         this.statusCode=statusCode;
     };
-    CustomException(){
+    public CustomException(){
         header="Something went wrong.";
         message="Unknown error, please try again.";
         statusCode=500;
