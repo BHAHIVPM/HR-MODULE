@@ -27,23 +27,11 @@ public class JwtUtils {
         this.key=new SecretKeySpec(keyBytes,"HmacSHA256");
     }
 
+    public int getJwtTokenExpire() {
+        return jwtTokenExpire;
+    }
+
 //===============================================================================================================
-//    public  String generateToken(UserDetails user, String logId){
-//        List<String> roles = user.getAuthorities().stream()
-//                .map(GrantedAuthority::getAuthority)
-//                .toList();
-//        String  userRole=roles.getFirst();
-//                userRole=userRole.equals("DEVELOPER")?"DEVELOPER":"ADMIN";
-//        return Jwts.builder().subject(user.getUsername())
-//                .claim("role", roles)
-//                .claim("type", "AUTH")
-//                .claim("database",userRole)
-//                .claim("logId",logId)
-//                .issuedAt(new Date(System.currentTimeMillis()))
-//                .expiration(new Date(System.currentTimeMillis()+jwtTokenExpire))
-//                .signWith(key)
-//                .compact();
-//    }
 
     public String generateToken(UserDetails user, String logId){
 
@@ -70,15 +58,6 @@ public class JwtUtils {
 
 
     //===============================================================================================================
-//    public  String generateGuestToken(String  user){
-//        return Jwts.builder().subject(user)
-//                .claim("type", "GUEST")
-//                .claim("database","ADMIN")
-//                .issuedAt(new Date(System.currentTimeMillis()))
-//                .expiration(new Date(System.currentTimeMillis()+jwtTokenExpire))
-//                .signWith(key)
-//                .compact();
-//    }
 
     public String generateGuestToken(String user){
 

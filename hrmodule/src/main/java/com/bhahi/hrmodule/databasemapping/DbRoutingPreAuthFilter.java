@@ -34,11 +34,14 @@ public class DbRoutingPreAuthFilter extends OncePerRequestFilter {
             String uri = request.getRequestURI();
             String clientId = null;
 
-            // ✅ CASE 1 — guest-token API
-            if (uri.startsWith("/auth/guest-token/")) {
+            // ✅ CASE 1 — login / guest-token APIs: no cookie exists yet, so the loginId
+            // travels in the URL path itself and we pull the client id straight from it.
+            if (uri.startsWith("/auth/guest-token/") || uri.startsWith("/auth/login/")) {
 
                 String loginId = uri.substring(uri.lastIndexOf("/") + 1);
-                clientId = loginId.substring(0, 4);
+                if (loginId.length() >= 4) {
+                    clientId = loginId.substring(0, 4);
+                }
             }
 
             // ✅ CASE 2 — other APIs

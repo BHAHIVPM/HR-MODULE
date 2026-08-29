@@ -1,6 +1,8 @@
 package com.bhahi.hrmodule.controller;
 
+import com.bhahi.hrmodule.dto.ChangePasswordRequest;
 import com.bhahi.hrmodule.dto.LoginRequest;
+import com.bhahi.hrmodule.dto.VerifyTempPasswordRequest;
 import com.bhahi.hrmodule.response.ResponseMessage;
 import com.bhahi.hrmodule.service.AuthService;
 import jakarta.servlet.http.HttpServletResponse;
@@ -34,6 +36,20 @@ public class AuthController {
     public ResponseEntity<ResponseMessage<String>> guestToken(@PathVariable String loginId,
                                                                 HttpServletResponse response) {
         ResponseMessage<String> result = authService.guestToken(loginId, response);
+        return ResponseEntity.status(result.getStatusCode()).body(result);
+    }
+
+    @PostMapping("/verify-temp-password/{loginId}")
+    public ResponseEntity<ResponseMessage<String>> verifyTempPassword(@PathVariable String loginId,
+                                                                      @Valid @RequestBody VerifyTempPasswordRequest request) {
+        ResponseMessage<String> result = authService.verifyTempPassword(loginId, request.tempPassword());
+        return ResponseEntity.status(result.getStatusCode()).body(result);
+    }
+
+    @PostMapping("/change-password/{loginId}")
+    public ResponseEntity<ResponseMessage<String>> changePassword(@PathVariable String loginId,
+                                                                  @Valid @RequestBody ChangePasswordRequest request) {
+        ResponseMessage<String> result = authService.changePassword(loginId, request.tempPassword(), request.newPassword());
         return ResponseEntity.status(result.getStatusCode()).body(result);
     }
 }

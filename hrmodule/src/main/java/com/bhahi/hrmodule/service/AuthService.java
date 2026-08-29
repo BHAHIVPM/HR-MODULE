@@ -29,17 +29,17 @@ public class AuthService {
     // NOTE: by the time this runs, DbRoutingPreAuthFilter has already read the first 4 digits of the
     // loginId path variable and pointed the RoutingDataSource at the correct tenant DB for this request.
     // ==============================================================================================================
-    public ResponseMessage<String> login(String loginId, String rawPassword, HttpServletResponse response) {
+    public ResponseMessage<String> login(String userId, String rawPassword, HttpServletResponse response) {
 
         ResponseMessage<String> result = new ResponseMessage<>();
 
-        ResponseMessage<String> invalid = validateLoginId(loginId);
+        ResponseMessage<String> invalid = validateLoginId(userId);
         if (invalid != null) {
             return invalid;
         }
 
         try {
-            Optional<UserLogin> userOpt = userLoginRepo.findByLoginId(loginId);
+            Optional<UserLogin> userOpt = userLoginRepo.findByUserId(userId);
             if (userOpt.isEmpty()) {
                 return unauthorized(result);
             }
@@ -77,19 +77,19 @@ public class AuthService {
     }
 
     // ==============================================================================================================
-    // GUEST TOKEN — loginId (12 digit) only, no password -> Guest_Token cookie (GUEST type, basic API access only)
+    // GUEST TOKEN — userId (12 digit) only, no password -> Guest_Token cookie (GUEST type, basic API access only)
     // ==============================================================================================================
-    public ResponseMessage<String> guestToken(String loginId, HttpServletResponse response) {
+    public ResponseMessage<String> guestToken(String userId, HttpServletResponse response) {
 
         ResponseMessage<String> result = new ResponseMessage<>();
 
-        ResponseMessage<String> invalid = validateLoginId(loginId);
+        ResponseMessage<String> invalid = validateLoginId(userId);
         if (invalid != null) {
             return invalid;
         }
 
         try {
-            String token = jwtUtils.generateGuestToken(loginId);
+            String token = jwtUtils.generateGuestToken(userId);
             setTokenCookie(response, "Guest_Token", token);
 
             result.setResponseOutput("Guest token issued.");
@@ -109,8 +109,8 @@ public class AuthService {
     // ==============================================================================================================
     // HELPERS
     // ==============================================================================================================
-    private ResponseMessage<String> validateLoginId(String loginId) {
-        if (loginId == null || !LOGIN_ID_PATTERN.matcher(loginId).matches()) {
+    private ResponseMessage<String> validateLoginId(String userId) {
+        if (userId == null || !LOGIN_ID_PATTERN.matcher(userId).matches()) {
             ResponseMessage<String> result = new ResponseMessage<>();
             result.setHeader("Invalid login id");
             result.setMessage("Login id must be exactly 12 digits (first 4 digits identify the client).");
@@ -134,5 +134,94 @@ public class AuthService {
         cookie.setPath("/");
         cookie.setMaxAge(jwtUtils.getJwtTokenExpire() / 1000); // jwtTokenExpire is in ms, cookie maxAge is in seconds
         response.addCookie(cookie);
+    }
+
+    // ==============================================================================================================
+// VERIFY TEMP PASSWORD — loginId + tempPassword -> confirms the temp password issued at creation is correct.
+// This is the "prove who you are" step before changePassword, since a new account has no real password yet.
+// ==============================================================================================================
+    public ResponseMessage<String> verifyTempPassword(String userId, String rawTempPassword) {
+
+        ResponseMessage<String> result = new ResponseMessage<>();
+
+        ResponseMessage<String> invalid = validateLoginId(userId);
+        if (invalid != null) {
+            return invalid;
+        }
+
+        try {
+            Optional<UserLogin> userOpt = userLoginRepo.findByUserId(userId);
+            if (userOpt.isEmpty()) {
+                return unauthorized(result);
+            }
+
+            UserLogin user = userOpt.get();
+
+            if (user.getTempPassword() == null || !passwordEncoder.matches(rawTempPassword, user.getTempPassword())) {
+                result.setHeader("Invalid temp password");
+                result.setMessage("Temp password is incorrect or has already been used.");
+                result.setStatusCode(401);
+                return result;
+            }
+
+            result.setResponseOutput("Temp password verified.");
+            result.setHeader("Success");
+            result.setMessage("Temp password verified. You can now set a new password.");
+            result.setStatusCode(200);
+            return result;
+
+        } catch (Exception e) {
+            result.setHeader("Verification failed");
+            result.setMessage("Something went wrong while verifying the temp password.");
+            result.setStatusCode(500);
+            return result;
+        }
+    }
+
+    // ==============================================================================================================
+// CHANGE PASSWORD — loginId + tempPassword + newPassword -> sets the real password column.
+// Re-checks the temp password here too rather than trusting a prior verifyTempPassword call, since these
+// are two separate stateless requests. Clears tempPassword afterwards so it can't be replayed.
+// ==============================================================================================================
+    public ResponseMessage<String> changePassword(String userId, String rawTempPassword, String newPassword) {
+
+        ResponseMessage<String> result = new ResponseMessage<>();
+
+        ResponseMessage<String> invalid = validateLoginId(userId);
+        if (invalid != null) {
+            return invalid;
+        }
+
+        try {
+            Optional<UserLogin> userOpt = userLoginRepo.findByUserId(userId);
+            if (userOpt.isEmpty()) {
+                return unauthorized(result);
+            }
+
+            UserLogin user = userOpt.get();
+
+            if (user.getTempPassword() == null || !passwordEncoder.matches(rawTempPassword, user.getTempPassword())) {
+                result.setHeader("Invalid temp password");
+                result.setMessage("Temp password is incorrect or has already been used.");
+                result.setStatusCode(401);
+                return result;
+            }
+
+            user.setPassword(passwordEncoder.encode(newPassword));
+            user.setTempPassword(null); // one-time use only
+            userLoginRepo.save(user);
+
+            result.setResponseOutput("Password changed.");
+            result.setHeader("Success");
+            result.setMessage("Password changed successfully. You can now log in with your new password.");
+            result.setStatusCode(200);
+            return result;
+
+        } catch (Exception e) {
+            result.setHeader("Change password failed");
+            result.setMessage("Something went wrong while changing the password.");
+            result.setStatusCode(500);
+            return result;
+        }
     }
 }

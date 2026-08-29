@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
@@ -29,6 +30,18 @@ public class ClientRoutingService {
     }
 
     private DataSource createDataSource(String clientId) {
+        if (Objects.equals(clientId, "1000")){
+            DataSource datasource=adminJdbcTemplate.getDataSource();
+            HikariDataSource hikariDataSource = (HikariDataSource) datasource;
+
+            hikariDataSource.setMaximumPoolSize(3);
+            hikariDataSource.setMinimumIdle(0);
+            hikariDataSource.setIdleTimeout(300000);
+            hikariDataSource.setMaxLifetime(550000);
+            hikariDataSource.setConnectionTimeout(10000);
+            return hikariDataSource;
+
+        }else {
 
         String sql = """
             SELECT db_domain_url,
@@ -63,5 +76,5 @@ public class ClientRoutingService {
         ds.setConnectionTimeout(10000);
 
         return ds;
-    }
+    }}
 }

@@ -20,7 +20,7 @@ public class DataSourceConfig {
 
 
     @Bean
-    @ConfigurationProperties("spring.datasource.adm")
+    @ConfigurationProperties("spring.datasource")
     public DataSource adminDataSource() {
         HikariDataSource ds = new HikariDataSource();
         ds.setMaximumPoolSize(3);
@@ -32,18 +32,18 @@ public class DataSourceConfig {
         return ds;
     }
 
-    @Bean
-    @ConfigurationProperties("spring.datasource.dev")
-    public DataSource devDataSource() {
-        HikariDataSource ds = new HikariDataSource();
-        ds.setMaximumPoolSize(3);
-        ds.setMinimumIdle(0);
-        ds.setIdleTimeout(500_000);
-        ds.setMaxLifetime(550_000);
-        ds.setKeepaliveTime(120_000);
-        ds.setConnectionTimeout(10_000);
-        return ds;
-    }
+//    @Bean
+//    @ConfigurationProperties("spring.datasource.dev")
+//    public DataSource devDataSource() {
+//        HikariDataSource ds = new HikariDataSource();
+//        ds.setMaximumPoolSize(3);
+//        ds.setMinimumIdle(0);
+//        ds.setIdleTimeout(500_000);
+//        ds.setMaxLifetime(550_000);
+//        ds.setKeepaliveTime(120_000);
+//        ds.setConnectionTimeout(10_000);
+//        return ds;
+//    }
 
 
     @Bean
@@ -76,9 +76,9 @@ public class DataSourceConfig {
         return new JdbcTemplate(adminDs);
     }
 
-    @Bean
-    public JdbcTemplate devjdbcTemplate(@Qualifier("devDataSource") DataSource devDS) {
-        return new JdbcTemplate(devDS);
-    }
+//    @Bean
+//    public JdbcTemplate devjdbcTemplate(@Qualifier("devDataSource") DataSource devDS) {
+//        return new JdbcTemplate(devDS);
+//    }
 
 }

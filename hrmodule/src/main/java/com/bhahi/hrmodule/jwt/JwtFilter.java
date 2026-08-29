@@ -2,7 +2,6 @@ package com.bhahi.hrmodule.jwt;
 
 import com.bhahi.hr.exception.CustomException;
 import com.bhahi.hrmodule.databasemapping.DatabaseContextHolder;
-import com.bhahi.hrmodule.model.UserLogin;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -18,7 +17,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.util.List;
@@ -27,20 +25,15 @@ import java.util.List;
 @RequiredArgsConstructor
 public class JwtFilter extends OncePerRequestFilter {
 
-    private final UserLogin currentUser;
-
     private final JwtUtils jwtUtils;
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        // Only filter the login endpoint
-        return (("/auth/login".equals(request.getRequestURI())
-                && "POST".equalsIgnoreCase(request.getMethod()))
-                ||
-                ((request.getRequestURI().contains("auth/guest-token"))
-                        && "POST".equalsIgnoreCase(request.getMethod())));
+        // Don't try to read a token that doesn't exist yet - login and guest-token
+        // are the two endpoints that ISSUE the cookie, not consume it.
+        String uri = request.getRequestURI();
+        return "POST".equalsIgnoreCase(request.getMethod())
+                && (uri.startsWith("/auth/login/") || uri.startsWith("/auth/guest-token/"));
     }
 
     @Override

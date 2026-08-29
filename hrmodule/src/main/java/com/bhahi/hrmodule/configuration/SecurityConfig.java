@@ -22,7 +22,11 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.firewall.StrictHttpFirewall;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.List;
 import java.util.function.Supplier;
 
 
@@ -45,11 +49,14 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
         httpSecurity
+                .cors(Customizer.withDefaults())
             .csrf(csrf -> csrf.disable()) // Disable CSRF for endpoint testing
             .authorizeHttpRequests(auth -> auth
                     // OPEN APIs — do NOT require JWT
                     .requestMatchers(
                             "/open/**",
+                            "/auth/login/**",
+                            "/auth/guest-token/**",
                             "/swagger-ui/**",
                             "/swagger-ui.html",
                             "/v3/api-docs/**",
@@ -125,7 +132,25 @@ public class SecurityConfig {
         firewall.setAllowUrlEncodedSlash(true);
         return firewall;
     }
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
 
+        // Specify your frontend origin (e.g. http://localhost:3000 or http://localhost:5173)
+        config.setAllowedOrigins(List.of("http://localhost:3000"));
+
+        // Allowed HTTP methods
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+
+        // Allowed request headers
+        config.setAllowedHeaders(List.of("*"));
+
+        // Required because your frontend axiosClient uses withCredentials: true
+        config.setAllowCredentials(true);
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
+    }
 
 
 }

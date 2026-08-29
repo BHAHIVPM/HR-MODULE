@@ -1,10 +1,10 @@
 package com.bhahi.hrmodule.controller;
 
+import com.bhahi.hrmodule.dto.UserCreationResponse;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.bind.annotation.*;
 
 import com.bhahi.hrmodule.model.UserLogin;
 import com.bhahi.hrmodule.response.ResponseMessage;
@@ -12,22 +12,37 @@ import com.bhahi.hrmodule.service.UserLoginService;
 
 import lombok.RequiredArgsConstructor;
 
-@Controller
+import java.util.List;
+
+@RestController
 @RequiredArgsConstructor
 @RequestMapping("/userData")
 public class UserLoginController {
-    
+
     private final UserLoginService userLoginService;
 
     @PostMapping("/save")
-    public ResponseEntity<ResponseMessage<UserLogin>> save(@RequestBody UserLogin login){
-        ResponseMessage<UserLogin> response = new ResponseMessage<>();
-        try{
-        response=userLoginService.save(login);
+    public ResponseEntity<ResponseMessage<UserCreationResponse>> save(@RequestBody UserLogin login) {
+        ResponseMessage<UserCreationResponse> response = userLoginService.save(login);
         return ResponseEntity.status(response.getStatusCode()).body(response);
-        }catch(Exception e){
+    }
+
+    @GetMapping("/all")
+    public ResponseEntity<ResponseMessage<List<UserLogin>>> findAll() {
+        ResponseMessage<List<UserLogin>> response = userLoginService.findAll();
         return ResponseEntity.status(response.getStatusCode()).body(response);
-        }
-        
+    }
+
+    @PutMapping("/update/{loginId}")
+    public ResponseEntity<ResponseMessage<UserLogin>> update(@PathVariable String loginId,
+                                                             @RequestBody UserLogin updates) {
+        ResponseMessage<UserLogin> response = userLoginService.update(loginId, updates);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    @DeleteMapping("/{loginId}")
+    public ResponseEntity<ResponseMessage<String>> delete(@PathVariable String loginId) {
+        ResponseMessage<String> response = userLoginService.delete(loginId);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 }
