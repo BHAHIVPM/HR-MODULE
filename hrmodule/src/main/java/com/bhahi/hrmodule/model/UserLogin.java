@@ -22,7 +22,19 @@ import java.util.List;
 @Table(name = "user_login")
 @Data
 public class UserLogin implements UserDetails {
-    public enum UserType{ADMIN, EMPLOYEE, USER}
+    public enum UserType {
+        DEVELOPER(10), SUPERADMIN(11), ADMIN(12), USER(13), EMPLOYEE(14), AGENT(15);
+
+        private final int typeCode;
+
+        UserType(int typeCode) {
+            this.typeCode = typeCode;
+        }
+
+        public int getTypeCode() {
+            return typeCode;
+        }
+    }
 
     public enum UserStatus {ACTIVE, INACTIVE}
 

@@ -34,9 +34,13 @@ public class DbRoutingPreAuthFilter extends OncePerRequestFilter {
             String uri = request.getRequestURI();
             String clientId = null;
 
-            // ✅ CASE 1 — login / guest-token APIs: no cookie exists yet, so the loginId
-            // travels in the URL path itself and we pull the client id straight from it.
-            if (uri.startsWith("/auth/guest-token/") || uri.startsWith("/auth/login/")) {
+            // ✅ CASE 1 — login / guest-token / refresh-token APIs: for login & guest-token
+            // no cookie exists yet, and for refresh-token we want DB routing to work even if
+            // the existing cookie is already expired (so we can still refresh it).
+            // The loginId travels in the URL path itself, so we pull the client id straight from it.
+            if (uri.startsWith("/auth/guest-token/")
+                    || uri.startsWith("/auth/login/")
+                    || uri.startsWith("/auth/refresh-token/")) {
 
                 String loginId = uri.substring(uri.lastIndexOf("/") + 1);
                 if (loginId.length() >= 4) {

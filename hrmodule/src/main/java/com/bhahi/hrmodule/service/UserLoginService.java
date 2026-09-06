@@ -1,6 +1,8 @@
 package com.bhahi.hrmodule.service;
 
+import com.bhahi.hrmodule.Utils.VerhoeffUtils;
 import com.bhahi.hrmodule.dto.UserCreationResponse;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -30,6 +32,14 @@ public class UserLoginService {
 
         ResponseMessage<UserCreationResponse> response = new ResponseMessage<>();
         try {
+            // Auto-generate the 12-digit login id:
+            //   digits 1-4  = client id (first 4 digits of the current authenticated user's login id)
+            //   digits 5-6  = user type code (DEVELOPER=10, SUPERADMIN=11, ADMIN=12, USER=13, EMPLOYEE=14, AGENT=15)
+            //   digits 7-11 = 5-digit sequential counter per client+type
+            //   digit  12   = Verhoeff checksum digit over the first 11 digits
+            String loginId = generateLoginId(userLogin.getUserType());
+            userLogin.setUserId(loginId);
+
             String rawTempPassword = generateTempPassword();
 
             userLogin.setTempPassword(passwordEncoder.encode(rawTempPassword));
@@ -51,6 +61,41 @@ public class UserLoginService {
             response.setStatusCode(500);
             return response;
         }
+    }
+
+    // ==============================================================================================================
+    // LOGIN ID GENERATION
+    // 12-digit format: [4-digit clientId][2-digit typeCode][5-digit counter][1-digit Verhoeff check]
+    // ==============================================================================================================
+    private String generateLoginId(UserLogin.UserType userType) {
+
+        // 1. First 4 digits = client id of the CURRENT authenticated user
+        String currentLoginId = SecurityContextHolder.getContext().getAuthentication().getName();
+        if (currentLoginId == null || currentLoginId.length() < 4) {
+            throw new IllegalStateException("Current user login id is not available or invalid.");
+        }
+        String clientId = currentLoginId.substring(0, 4);
+
+        // 2. Next 2 digits = user type code
+        String typeCode = String.format("%02d", userType.getTypeCode());
+
+        // 3. Build the 6-digit prefix for looking up existing users of this client+type
+        String prefix = clientId + typeCode;
+
+        // 4. Get the previous counter for this prefix (digits 7-11 of existing login ids)
+        Optional<Integer> maxCounterOpt = userLoginRepo.findMaxCounterByPrefix(prefix);
+        int nextCounter = maxCounterOpt.map(c -> c + 1).orElse(1);
+
+        // 5. Format the counter as 5 digits (padded with leading zeros)
+        String counter = String.format("%05d", nextCounter);
+
+        // 6. First 11 digits = clientId + typeCode + counter
+        String first11Digits = prefix + counter;
+
+        // 7. Last digit = Verhoeff checksum over the first 11 digits
+        char checkDigit = VerhoeffUtils.generateCheckDigit(first11Digits);
+
+        return first11Digits + checkDigit;
     }
 
     private String generateTempPassword() {
@@ -94,7 +139,7 @@ public class UserLoginService {
 
             UserLogin existing = existingOpt.get();
             existing.setName(updates.getName());
-            existing.setUserId(updates.getUserId());
+            // userId is auto-generated and immutable — do NOT allow changing it here
             existing.setUserMail(updates.getUserMail());
             existing.setMobileNo(updates.getMobileNo());
             existing.setUserType(updates.getUserType());

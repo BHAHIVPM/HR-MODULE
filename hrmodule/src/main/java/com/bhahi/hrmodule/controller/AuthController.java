@@ -5,6 +5,7 @@ import com.bhahi.hrmodule.dto.LoginRequest;
 import com.bhahi.hrmodule.dto.VerifyTempPasswordRequest;
 import com.bhahi.hrmodule.response.ResponseMessage;
 import com.bhahi.hrmodule.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +37,14 @@ public class AuthController {
     public ResponseEntity<ResponseMessage<String>> guestToken(@PathVariable String loginId,
                                                                 HttpServletResponse response) {
         ResponseMessage<String> result = authService.guestToken(loginId, response);
+        return ResponseEntity.status(result.getStatusCode()).body(result);
+    }
+
+    @PostMapping("/refresh-token/{loginId}")
+    public ResponseEntity<ResponseMessage<String>> refreshToken(@PathVariable String loginId,
+                                                               HttpServletRequest request,
+                                                               HttpServletResponse response) {
+        ResponseMessage<String> result = authService.refreshToken(loginId, request, response);
         return ResponseEntity.status(result.getStatusCode()).body(result);
     }
 

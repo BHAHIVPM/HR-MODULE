@@ -4,7 +4,9 @@ import com.bhahi.hrmodule.jwt.JwtUtils;
 import com.bhahi.hrmodule.model.UserLogin;
 import com.bhahi.hrmodule.repository.UserLoginRepo;
 import com.bhahi.hrmodule.response.ResponseMessage;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -107,8 +109,111 @@ public class AuthService {
     }
 
     // ==============================================================================================================
+    // REFRESH TOKEN — reads the existing Access_token cookie, validates it, extracts the same claims,
+    // and issues a freshly generated token with the same info back into the Access_token cookie.
+    // NOTE: like login/guest-token, the loginId is in the URL path so DbRoutingPreAuthFilter can point
+    // this request at the correct tenant DB before the @RequestBody is parsed.
+    // ==============================================================================================================
+    public ResponseMessage<String> refreshToken(String userId, HttpServletRequest request, HttpServletResponse response) {
+
+        ResponseMessage<String> result = new ResponseMessage<>();
+
+        ResponseMessage<String> invalid = validateLoginId(userId);
+        if (invalid != null) {
+            return invalid;
+        }
+
+        try {
+            // 1. Check the existing Access_token cookie exists
+            String existingToken = getAccessTokenFromCookies(request);
+            if (existingToken == null) {
+                result.setHeader("Token missing");
+                result.setMessage("Access token not found. Please log in again.");
+                result.setStatusCode(401);
+                return result;
+            }
+
+            // 2. Check the existing token has not expired
+            if (jwtUtils.isTokenExpired(existingToken)) {
+                result.setHeader("Token expired");
+                result.setMessage("Access token has expired. Please log in again.");
+                result.setStatusCode(401);
+                return result;
+            }
+
+            // 3. Extract claims from the existing token
+            Claims claims = jwtUtils.extractType(existingToken);
+
+            // 4. Only AUTH tokens can be refreshed (guest tokens are not refreshable)
+            String tokenType = claims.get("type", String.class);
+            if (!"AUTH".equals(tokenType)) {
+                result.setHeader("Invalid token type");
+                result.setMessage("Only AUTH tokens can be refreshed.");
+                result.setStatusCode(401);
+                return result;
+            }
+
+            // 5. Verify the token subject matches the loginId in the URL path
+            String tokenSubject = claims.getSubject();
+            if (tokenSubject == null || !userId.equals(tokenSubject)) {
+                result.setHeader("Token mismatch");
+                result.setMessage("Token does not match the login id.");
+                result.setStatusCode(401);
+                return result;
+            }
+
+            // 6. Look up the user to get fresh details from the DB
+            Optional<UserLogin> userOpt = userLoginRepo.findByUserId(userId);
+            if (userOpt.isEmpty()) {
+                return unauthorized(result);
+            }
+
+            UserLogin user = userOpt.get();
+
+            if (user.getStatus() != UserLogin.UserStatus.ACTIVE) {
+                result.setHeader("Account inactive");
+                result.setMessage("This account is inactive. Please contact your administrator.");
+                result.setStatusCode(403);
+                return result;
+            }
+
+            // 7. Reuse the same logId from the existing token and regenerate a fresh token
+            String logId = claims.get("logId", String.class);
+            String newToken = jwtUtils.generateToken(user, logId);
+
+            // 8. Set the refreshed token back as the Access_token cookie
+            setTokenCookie(response, "Access_token", newToken);
+
+            result.setResponseOutput(newToken);
+            result.setHeader("Success");
+            result.setMessage("Token refreshed successfully.");
+            result.setStatusCode(200);
+            return result;
+
+        } catch (Exception e) {
+            result.setHeader("Refresh failed");
+            result.setMessage("Something went wrong while refreshing the token.");
+            result.setStatusCode(500);
+            return result;
+        }
+    }
+
+    // ==============================================================================================================
     // HELPERS
     // ==============================================================================================================
+    private String getAccessTokenFromCookies(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) {
+            return null;
+        }
+        for (Cookie cookie : cookies) {
+            if ("Access_token".equals(cookie.getName())) {
+                return cookie.getValue();
+            }
+        }
+        return null;
+    }
+
     private ResponseMessage<String> validateLoginId(String userId) {
         if (userId == null || !LOGIN_ID_PATTERN.matcher(userId).matches()) {
             ResponseMessage<String> result = new ResponseMessage<>();
