@@ -31,9 +31,13 @@ public class JwtFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) {
         // Don't try to read a token that doesn't exist yet - login and guest-token
         // are the two endpoints that ISSUE the cookie, not consume it.
+        // refresh-token also bypasses this filter because the whole point is to
+        // handle an expired / existing token inside AuthService itself.
         String uri = request.getRequestURI();
         return "POST".equalsIgnoreCase(request.getMethod())
-                && (uri.startsWith("/auth/login/") || uri.startsWith("/auth/guest-token/"));
+                && (uri.startsWith("/auth/login/")
+                    || uri.startsWith("/auth/guest-token/")
+                    || uri.startsWith("/auth/refresh-token/"));
     }
 
     @Override
