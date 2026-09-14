@@ -1,6 +1,8 @@
 package com.bhahi.hrmodule.service.roleassignment;
 
+import com.bhahi.hrmodule.model.menu.DesktopMenuNameMasterOperation;
 import com.bhahi.hrmodule.model.roleassignment.*;
+import com.bhahi.hrmodule.repository.menu.DesktopMenuMasterOperationRepository;
 import com.bhahi.hrmodule.repository.roleassignment.*;
 import com.bhahi.hrmodule.response.ResponseMessage;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +20,7 @@ public class UserLevelPrivilegeService {
     private final UserLevelPrivilegeRepo userLevelPrivilegeRepo;
     private final RoleAssignmentMasterRepo roleAssignmentMasterRepo;
     private final RolePrivilegeRepo rolePrivilegeRepo;
-    private final DesktopMenuNameMasterOperationRepo menuRepo;
+    private final DesktopMenuMasterOperationRepository menuRepo;
 
     private String getUserId() {
         return SecurityContextHolder.getContext().getAuthentication().getName();

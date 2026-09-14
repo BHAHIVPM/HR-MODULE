@@ -1,7 +1,9 @@
-package com.bhahi.hrmodule.model.roleassignment;
+package com.bhahi.hrmodule.model.menu;
 
 import jakarta.persistence.*;
 import lombok.Data;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "desktop_menu_sub_group_master_operation")
@@ -15,4 +17,13 @@ public class DesktopMenuSubGroupMasterOperation {
 
     @Column(name = "db_sub_group_name")
     private String subGroupName;
+
+    @Column(name = "db_entry_date")
+    private LocalDateTime entryDate;
+
+    @PrePersist
+    @PreUpdate
+    void onSave() {
+        this.entryDate = LocalDateTime.now();
+    }
 }
