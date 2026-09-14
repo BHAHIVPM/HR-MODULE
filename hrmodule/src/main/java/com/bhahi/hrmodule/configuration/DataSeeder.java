@@ -1,8 +1,8 @@
 package com.bhahi.hrmodule.configuration;
 
 import com.bhahi.hrmodule.Utils.VerhoeffUtils;
-import com.bhahi.hrmodule.model.UserLogin;
-import com.bhahi.hrmodule.repository.UserLoginRepo;
+import com.bhahi.hrmodule.model.auth.UserLogin;
+import com.bhahi.hrmodule.repository.auth.UserLoginRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
