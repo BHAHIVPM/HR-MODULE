@@ -1,5 +1,6 @@
 package com.bhahi.hrmodule.controller.auth;
 
+import com.bhahi.hrmodule.dto.auth.AboutMeResponse;
 import com.bhahi.hrmodule.dto.auth.ChangePasswordRequest;
 import com.bhahi.hrmodule.dto.auth.LoginRequest;
 import com.bhahi.hrmodule.dto.auth.VerifyTempPasswordRequest;
@@ -10,6 +11,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -59,6 +61,22 @@ public class AuthController {
     public ResponseEntity<ResponseMessage<String>> changePassword(@PathVariable String loginId,
                                                                   @Valid @RequestBody ChangePasswordRequest request) {
         ResponseMessage<String> result = authService.changePassword(loginId, request.tempPassword(), request.newPassword());
+        return ResponseEntity.status(result.getStatusCode()).body(result);
+    }
+
+    // GET /auth/auth-me - validates the CURRENT token (Access_token cookie or Bearer header).
+    // Valid -> 200 + true. Missing / expired / tampered -> 401 + false.
+    @GetMapping("/auth-me")
+    public ResponseEntity<ResponseMessage<Boolean>> authMe(HttpServletRequest request) {
+        ResponseMessage<Boolean> result = authService.authMe(request);
+        return ResponseEntity.status(result.getStatusCode()).body(result);
+    }
+
+    // GET /auth/about-me - same token check, then returns the logged-in user's profile
+    // (userId, name, email, mobileNo, userType, status). No passwords / otp.
+    @GetMapping("/about-me")
+    public ResponseEntity<ResponseMessage<AboutMeResponse>> aboutMe(HttpServletRequest request) {
+        ResponseMessage<AboutMeResponse> result = authService.aboutMe(request);
         return ResponseEntity.status(result.getStatusCode()).body(result);
     }
 }
