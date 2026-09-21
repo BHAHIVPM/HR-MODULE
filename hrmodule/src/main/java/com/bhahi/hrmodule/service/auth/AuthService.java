@@ -1,5 +1,6 @@
 package com.bhahi.hrmodule.service.auth;
 
+import com.bhahi.hrmodule.dto.auth.AboutMeResponse;
 import com.bhahi.hrmodule.jwt.JwtUtils;
 import com.bhahi.hrmodule.model.auth.UserLogin;
 import com.bhahi.hrmodule.repository.auth.UserLoginRepo;
@@ -199,8 +200,134 @@ public class AuthService {
     }
 
     // ==============================================================================================================
-    // HELPERS
+    // AUTH-ME — checks the CURRENT token (Access_token cookie or Authorization: Bearer header).
+    // Valid   -> 200 + true. Missing / invalid / expired -> 401 + false.
+    // Kept permitAll in SecurityConfig on purpose so THIS method (not the filter chain)
+    // decides the 401 body, keeping the ResponseMessage shape consistent.
     // ==============================================================================================================
+    public ResponseMessage<Boolean> authMe(HttpServletRequest request) {
+        ResponseMessage<Boolean> result = new ResponseMessage<>();
+        String token = getTokenFromRequest(request);
+        if (token == null) {
+            result.setResponseOutput(false);
+            result.setHeader("Unauthorized");
+            result.setMessage("Access token is missing. Please log in again.");
+            result.setStatusCode(401);
+            return result;
+        }
+        try {
+            if (jwtUtils.isTokenExpired(token)) {
+                result.setResponseOutput(false);
+                result.setHeader("Unauthorized");
+                result.setMessage("Access token has expired. Please log in again.");
+                result.setStatusCode(401);
+                return result;
+            }
+            // Signature / structure check - throws on tampered or malformed tokens.
+            jwtUtils.extractType(token);
+        } catch (Exception e) {
+            result.setResponseOutput(false);
+            result.setHeader("Unauthorized");
+            result.setMessage("Access token is invalid. Please log in again.");
+            result.setStatusCode(401);
+            return result;
+        }
+        result.setResponseOutput(true);
+        result.setHeader("Success");
+        result.setMessage("Token is valid.");
+        result.setStatusCode(200);
+        return result;
+    }
+
+    // ==============================================================================================================
+    // ABOUT-ME — same token check as authMe, then returns the profile behind the token:
+    // userId, name, email, mobileNo, userType, status. Never passwords / otp.
+    // Missing / invalid / expired token -> 401. Unknown user -> 401. Inactive -> 403.
+    // ==============================================================================================================
+    public ResponseMessage<AboutMeResponse> aboutMe(HttpServletRequest request) {
+        ResponseMessage<AboutMeResponse> result = new ResponseMessage<>();
+        String token = getTokenFromRequest(request);
+        if (token == null) {
+            result.setHeader("Unauthorized");
+            result.setMessage("Access token is missing. Please log in again.");
+            result.setStatusCode(401);
+            return result;
+        }
+        final String userId;
+        try {
+            if (jwtUtils.isTokenExpired(token)) {
+                result.setHeader("Unauthorized");
+                result.setMessage("Access token has expired. Please log in again.");
+                result.setStatusCode(401);
+                return result;
+            }
+            userId = jwtUtils.extractUsername(token);
+        } catch (Exception e) {
+            result.setHeader("Unauthorized");
+            result.setMessage("Access token is invalid. Please log in again.");
+            result.setStatusCode(401);
+            return result;
+        }
+        try {
+            Optional<UserLogin> userOpt = userLoginRepo.findByUserId(userId);
+            if (userOpt.isEmpty()) {
+                result.setHeader("Unauthorized");
+                result.setMessage("User not found for this token. Please log in again.");
+                result.setStatusCode(401);
+                return result;
+            }
+            UserLogin user = userOpt.get();
+            if (user.getStatus() != UserLogin.UserStatus.ACTIVE) {
+                result.setHeader("Account inactive");
+                result.setMessage("This account is inactive. Please contact your administrator.");
+                result.setStatusCode(403);
+                return result;
+            }
+            result.setResponseOutput(AboutMeResponse.from(user));
+            result.setHeader("Success");
+            result.setMessage("Profile fetched successfully.");
+            result.setStatusCode(200);
+            return result;
+        } catch (Exception e) {
+            result.setHeader("Fetch failed");
+            result.setMessage("Something went wrong while fetching the profile.");
+            result.setStatusCode(500);
+            return result;
+        }
+    }
+
+    // Looks for the token in: Access_token cookie -> Guest_Token cookie -> Authorization: Bearer header.
+    private String getTokenFromRequest(HttpServletRequest request) {
+        if (request == null) {
+            return null;
+        }
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            String guest = null;
+            for (Cookie cookie : cookies) {
+                if (cookie == null || cookie.getName() == null) {
+                    continue;
+                }
+                if ("Access_token".equals(cookie.getName()) && cookie.getValue() != null
+                        && !cookie.getValue().isBlank()) {
+                    return cookie.getValue();
+                }
+                if ("Guest_Token".equals(cookie.getName()) && cookie.getValue() != null
+                        && !cookie.getValue().isBlank()) {
+                    guest = cookie.getValue();
+                }
+            }
+            if (guest != null) {
+                return guest;
+            }
+        }
+        String header = request.getHeader("Authorization");
+        if (header != null && header.startsWith("Bearer ")) {
+            String bearer = header.substring(7).trim();
+            return bearer.isEmpty() ? null : bearer;
+        }
+        return null;
+    }
     private String getAccessTokenFromCookies(HttpServletRequest request) {
         Cookie[] cookies = request.getCookies();
         if (cookies == null) {

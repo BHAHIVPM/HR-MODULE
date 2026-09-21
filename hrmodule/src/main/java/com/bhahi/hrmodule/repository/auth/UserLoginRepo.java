@@ -16,6 +16,11 @@ public interface UserLoginRepo extends JpaRepository<UserLogin, Integer>{
     void deleteByUserId(String userId);
     boolean existsByUserId(String userId);
 
+    boolean existsByUserMail(String userMail);
+    boolean existsByMobileNo(String mobileNo);
+    Optional<UserLogin> findByUserMail(String userMail);
+    Optional<UserLogin> findByMobileNo(String mobileNo);
+
     // Finds the highest 5-digit counter (digits 7-11) among users sharing the same
     // 6-digit prefix (4-digit client id + 2-digit user type code).
     // The Verhoeff check digit (digit 12) is stripped automatically by only looking

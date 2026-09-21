@@ -1,13 +1,17 @@
 package com.bhahi.hr.exception;
 
-import lombok.Getter;
-
 public class CustomException extends RuntimeException {
-    @Getter
     private final String header;
     private final String message;
-    @Getter
     private final int statusCode;
+
+    public String getHeader() {
+        return header;
+    }
+
+    public int getStatusCode() {
+        return statusCode;
+    }
 
     @Override
     public String getMessage() {

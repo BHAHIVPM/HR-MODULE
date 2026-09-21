@@ -40,11 +40,11 @@ public class EmployeeMaster {
     private String lastName;
 
     @NotNull
-    @Column(length = 150, nullable = false)
+    @Column(length = 150, nullable = false, unique = true)
     private String email;
 
     @NotNull
-    @Column(length = 10, nullable = false)
+    @Column(length = 10, nullable = false, unique = true)
     private String mobileNo;
 
     private LocalDate dateOfBirth;

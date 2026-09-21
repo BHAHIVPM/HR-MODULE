@@ -12,6 +12,11 @@ public interface EmployeeMasterRepo extends JpaRepository<EmployeeMaster, Intege
 
     Optional<EmployeeMaster> findByEmployeeCode(String employeeCode);
 
+    boolean existsByEmail(String email);
+    boolean existsByMobileNo(String mobileNo);
+    Optional<EmployeeMaster> findByEmail(String email);
+    Optional<EmployeeMaster> findByMobileNo(String mobileNo);
+
     List<EmployeeMaster> findByStatus(EmployeeMaster.EmployeeStatus status);
 
     List<EmployeeMaster> findByReportingManagerId(Integer reportingManagerId);

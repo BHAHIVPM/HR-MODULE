@@ -55,11 +55,11 @@ public class UserLogin implements UserDetails {
     private String name;
 
     @NotNull
-    @Column(length = 150, nullable = false)
+    @Column(length = 150, nullable = false, unique = true)
     private String userMail;
 
     @NotNull
-    @Column(length = 10, nullable = false)
+    @Column(length = 10, nullable = false, unique = true)
     private String mobileNo;
 
     @JsonIgnore
