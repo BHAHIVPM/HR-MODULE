@@ -12,7 +12,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/menu-operation")
+@RequestMapping("/menu-operation")
 public class DesktopMenuOperationController {
 
     private final DesktopMenuOperationService menuService;
@@ -24,6 +24,7 @@ public class DesktopMenuOperationController {
     @PostMapping("/add")
     public ResponseEntity<ResponseMessage<String>> addMenu(@RequestBody DesktopMenuNameMasterOperation menuMaster) {
         ResponseMessage<String> response = menuService.addMenu(menuMaster);
+        System.err.println("====================="+menuMaster);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 

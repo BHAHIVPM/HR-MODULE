@@ -12,7 +12,6 @@ import java.time.LocalDateTime;
 public class DesktopMenuNameMasterOperation {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "db_menu_name_id")
     private Integer menuNameId;
 

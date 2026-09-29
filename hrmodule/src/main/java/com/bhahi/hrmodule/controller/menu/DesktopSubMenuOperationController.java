@@ -11,7 +11,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/sub-menu-operation")
+@RequestMapping("/sub-menu-operation")
 public class DesktopSubMenuOperationController {
 
     private final DesktopSubMenuOperationService subMenuOperation;

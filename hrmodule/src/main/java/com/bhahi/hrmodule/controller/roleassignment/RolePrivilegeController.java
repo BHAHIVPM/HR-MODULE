@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/role-privilege")
+@RequestMapping("/role-privilege")
 @RequiredArgsConstructor
 public class RolePrivilegeController {
 
