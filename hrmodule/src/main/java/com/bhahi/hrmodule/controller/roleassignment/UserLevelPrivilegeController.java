@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/user-level-privilege")
+@RequestMapping("/user-level-privilege")
 @RequiredArgsConstructor
 public class UserLevelPrivilegeController {
 

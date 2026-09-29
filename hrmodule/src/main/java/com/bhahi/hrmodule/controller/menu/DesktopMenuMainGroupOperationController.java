@@ -16,7 +16,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/main-group-operation")
+@RequestMapping("/main-group-operation")
 public class DesktopMenuMainGroupOperationController {
 
     private final DesktopMenuMainGroupOperationService mainGroupService;

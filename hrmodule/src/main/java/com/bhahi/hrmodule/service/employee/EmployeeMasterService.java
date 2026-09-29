@@ -108,7 +108,7 @@ public class EmployeeMasterService {
             response.setStatusCode(e.getStatusCode());
             return response;
         } catch (DataIntegrityViolationException e) {
-            System.err.println("====================================23532523");
+            System.err.println("====================================23532523"+e);
             TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
             response.setHeader("Duplicate entry");
             response.setMessage("Email or mobile number already exists.");

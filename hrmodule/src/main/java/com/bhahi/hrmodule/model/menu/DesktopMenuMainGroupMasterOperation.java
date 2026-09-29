@@ -14,7 +14,6 @@ import java.time.LocalDateTime;
 public class DesktopMenuMainGroupMasterOperation {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "db_main_group_id")
     private Integer mainGroupId;
 

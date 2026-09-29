@@ -41,6 +41,7 @@ public class DesktopMenuMainGroupOperationServiceImpl implements DesktopMenuMain
     @Override
     @Transactional
     public ResponseMessage<String> addMainGroup(DesktopMenuMainGroupMasterOperation menuMainGroupMaster) {
+        System.err.println(">>>>>>>>>>>>>>>>>>>>>>>>>"+menuMainGroupMaster);
         ResponseMessage<String> response = new ResponseMessage<>();
         try {
             String mainGroupName = menuMainGroupMaster.getMainGroupName().trim();
@@ -64,6 +65,7 @@ public class DesktopMenuMainGroupOperationServiceImpl implements DesktopMenuMain
             menuMainGroupMaster.setMainGroupId(newId);
             menuMainGroupMaster.setMainGroupName(mainGroupName);
             menuMainGroupMaster.setHierarchyId(newHierarchyId);
+            System.err.println(">>>>>>>>>>>>>>>>>>>>>>----->>>"+menuMainGroupMaster);
             menuMainGroupRepo.save(menuMainGroupMaster);
             response.setHeader(SUCCESS_MSG);
             response.setMessage("Main Group added successfully.");

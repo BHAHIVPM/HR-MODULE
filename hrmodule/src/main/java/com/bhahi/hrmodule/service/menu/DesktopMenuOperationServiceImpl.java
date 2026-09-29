@@ -78,6 +78,7 @@ public class DesktopMenuOperationServiceImpl implements DesktopMenuOperationServ
             menuMaster.setEditOption(validateYesNoInput(menuMaster.getEditOption(), "Edit Option"));
             menuMaster.setIsPrivilege(validateYesNoInput(menuMaster.getIsPrivilege(), "IsPrivilege"));
             menuMaster.setHierarchyId(Integer.MAX_VALUE);
+            System.err.println(menuMaster);
             menuRepo.save(menuMaster);
             List<DesktopMenuNameMasterOperation> allMenus = menuRepo.findAllOrderedByHierarchy();
             allMenus.sort(Comparator.comparing(DesktopMenuNameMasterOperation::getMainGroupId).thenComparing(DesktopMenuNameMasterOperation::getHierarchyId));
