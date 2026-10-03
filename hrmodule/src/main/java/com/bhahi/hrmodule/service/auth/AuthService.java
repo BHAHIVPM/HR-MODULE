@@ -10,9 +10,12 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -360,12 +363,14 @@ public class AuthService {
     }
 
     private void setTokenCookie(HttpServletResponse response, String name, String token) {
-        Cookie cookie = new Cookie(name, token);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(true);           // requires HTTPS in real deployments; fine for local http too in most browsers during dev, but flip to false if you test on plain http and it gets rejected
-        cookie.setPath("/");
-        cookie.setMaxAge(jwtUtils.getJwtTokenExpire() / 1000); // jwtTokenExpire is in ms, cookie maxAge is in seconds
-        response.addCookie(cookie);
+        ResponseCookie cookie = ResponseCookie.from(name, token)
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("None")
+                .path("/")
+                .maxAge(Duration.ofMillis(jwtUtils.getJwtTokenExpire())) // ms -> Duration
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 
     // ==============================================================================================================

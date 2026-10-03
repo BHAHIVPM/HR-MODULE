@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -58,11 +59,11 @@ public class SecurityConfig {
                             "/auth/login/**",
                             "/auth/guest-token/**",
                             "/auth/refresh-token/**",
-                            "/swagger-ui/**",
-                            "/swagger-ui.html",
-                            "/v3/api-docs/**",
-                            "/swagger-resources/**",
-                            "/webjars/**",
+//                            "/swagger-ui/**",
+//                            "/swagger-ui.html",
+//                            "/v3/api-docs/**",
+//                            "/swagger-resources/**",
+//                            "/webjars/**",
                             "/error"
                     ).permitAll()
                     .requestMatchers("/guest/**")
@@ -134,20 +135,20 @@ public class SecurityConfig {
         return firewall;
     }
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
+    public CorsConfigurationSource corsConfigurationSource(
+            @Value("${app.cors.allowed-origins:http://localhost:3000}") List<String> allowedOrigins) {
+
         CorsConfiguration config = new CorsConfiguration();
 
-        // Specify your frontend origin (e.g. http://localhost:3000 or http://localhost:5173)
-        config.setAllowedOrigins(List.of("http://localhost:3000"));
-
-        // Allowed HTTP methods
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-
-        // Allowed request headers
+        // Explicit origins only (required when allowCredentials is true; "*" is not allowed)
+        config.setAllowedOrigins(allowedOrigins);
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
 
-        // Required because your frontend axiosClient uses withCredentials: true
+        // Needed because your frontend axiosClient uses withCredentials: true
         config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
