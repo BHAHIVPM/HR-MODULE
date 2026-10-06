@@ -34,11 +34,11 @@ public class DataSeeder implements CommandLineRunner {
 
         UserLogin admin = new UserLogin();
         admin.setUserId(DEFAULT_USER_ID);
-        admin.setName("Default Admin");
+        admin.setName("Default Developer");
         admin.setUserMail("admin@example.com");
         admin.setMobileNo("9999999999");
         admin.setPassword(passwordEncoder.encode(DEFAULT_PASSWORD));
-        admin.setUserType(UserLogin.UserType.ADMIN);
+        admin.setUserType(UserLogin.UserType.DEVELOPER);
         admin.setStatus(UserLogin.UserStatus.ACTIVE);
 
         userLoginRepo.save(admin); // direct save - bypasses the temp-password flow on purpose
