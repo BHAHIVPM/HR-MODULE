@@ -79,4 +79,10 @@ public class AuthController {
         ResponseMessage<AboutMeResponse> result = authService.aboutMe(request);
         return ResponseEntity.status(result.getStatusCode()).body(result);
     }
+
+    @GetMapping("/ping-me")
+    public ResponseEntity<String> pingMe() {
+        return ResponseEntity.status(200).body("okay");
+    }
+
 }

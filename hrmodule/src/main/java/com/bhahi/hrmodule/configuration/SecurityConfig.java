@@ -56,9 +56,10 @@ public class SecurityConfig {
                     // OPEN APIs — do NOT require JWT
                     .requestMatchers(
                             "/open/**",
-                            "/auth/login/**",
-                            "/auth/guest-token/**",
-                            "/auth/refresh-token/**",
+                              "/auth/login/**",
+                              "/auth/guest-token/**",
+                              "/auth/refresh-token/**",
+                              "/auth/ping-me",
 //                            "/swagger-ui/**",
 //                            "/swagger-ui.html",
 //                            "/v3/api-docs/**",
