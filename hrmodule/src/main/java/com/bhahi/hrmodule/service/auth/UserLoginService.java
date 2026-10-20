@@ -1,19 +1,27 @@
 package com.bhahi.hrmodule.service.auth;
 
+import com.bhahi.hr.dto.OTP.KafkaEventType;
 import com.bhahi.hr.exception.CustomException;
+import com.bhahi.hrmodule.Utils.AESUtils;
 import com.bhahi.hrmodule.Utils.MobileAndEmailValidation;
 import com.bhahi.hrmodule.Utils.UserRolePolicy;
 import com.bhahi.hrmodule.Utils.VerhoeffUtils;
 import com.bhahi.hrmodule.dto.auth.UserCreationResponse;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import com.bhahi.hrmodule.model.auth.UserLogin;
 import com.bhahi.hrmodule.repository.auth.UserLoginRepo;
 import com.bhahi.hrmodule.response.ResponseMessage;
+import com.bhahi.hr.dto.OTP.OtpMailEvent;
 import lombok.RequiredArgsConstructor;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.security.SecureRandom;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,8 +31,14 @@ public class UserLoginService {
 
     private final UserLoginRepo userLoginRepo;
     private final PasswordEncoder passwordEncoder;
+    private final StringRedisTemplate redisTemplate;
+    private final KafkaEventPublisher kafkaEventPublisher;
+
     private static final String TEMP_PASSWORD_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
     private static final SecureRandom RANDOM = new SecureRandom();
+
+    private static final Duration OTP_TTL = Duration.ofMinutes(5);
+    private static final int MAX_OTP_ATTEMPTS = 5;
 
     public ResponseMessage<UserCreationResponse> save(UserLogin userLogin) {
         ResponseMessage<UserCreationResponse> response = new ResponseMessage<>();
@@ -76,6 +90,7 @@ public class UserLoginService {
             return response;
         }
     }
+
     private String generateLoginId(UserLogin.UserType userType) {
         String currentLoginId = SecurityContextHolder.getContext().getAuthentication().getName();
         if (currentLoginId == null || currentLoginId.length() < 4) {
@@ -117,6 +132,7 @@ public class UserLoginService {
             return response;
         }
     }
+
     public ResponseMessage<UserLogin> update(String userId, UserLogin updates) {
         ResponseMessage<UserLogin> response = new ResponseMessage<>();
         try {
@@ -200,6 +216,143 @@ public class UserLoginService {
         } catch (Exception e) {
             response.setHeader("Delete failed");
             response.setMessage("Could not delete the user. " + e.getMessage());
+            response.setStatusCode(500);
+            return response;
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // OTP
+    // ---------------------------------------------------------------
+
+    private String otpKey(String loginId, String mobileNo) {
+        return "otp:" + loginId + ":" + mobileNo;
+    }
+
+    private String otpAttemptsKey(String loginId, String mobileNo) {
+        return "otp-attempts:" + loginId + ":" + mobileNo;
+    }
+
+    private String maskEmail(String email) {
+        int at = email.indexOf('@');
+        if (at <= 1) {
+            return "***" + email.substring(Math.max(at, 0));
+        }
+        return email.charAt(0) + "***" + email.substring(at);
+    }
+
+    public ResponseMessage<String> generateOtp(String loginId, String mobileNo) {
+        ResponseMessage<String> response = new ResponseMessage<>();
+        try {
+            if (loginId == null || loginId.isBlank() || mobileNo == null || mobileNo.isBlank()) {
+                throw new CustomException("Missing data.", "Login id and mobile number are required.", 400);
+            }
+            loginId = loginId.trim();
+            mobileNo = mobileNo.trim();
+
+            UserLogin user = userLoginRepo.findByUserId(loginId).orElse(null);
+            // Same message for "no user" and "wrong mobile" so nobody can probe which login ids exist
+            if (user == null || user.getMobileNo() == null || !user.getMobileNo().trim().equals(mobileNo)) {
+                throw new CustomException("Invalid details.", "Login id and mobile number do not match.", 400);
+            }
+            if (user.getStatus() != UserLogin.UserStatus.ACTIVE) {
+                throw new CustomException("Forbidden.", "This user is not active.", 403);
+            }
+            String email = user.getUserMail();
+            if (email == null || email.isBlank()) {
+                throw new CustomException("No email.", "No email id is registered for this user.", 400);
+            }
+
+            String otp = String.format("%06d", RANDOM.nextInt(1_000_000));
+            String encryptedOtp = AESUtils.encrypt(otp);
+
+            redisTemplate.opsForValue().set(otpKey(loginId, mobileNo), encryptedOtp, OTP_TTL);
+            redisTemplate.delete(otpAttemptsKey(loginId, mobileNo)); // reset attempts for the new OTP
+
+            // Never return the OTP in the API response.
+            // Fire and forget: the mail server picks this event up from Kafka and sends the mail.
+            // We do not wait for Kafka or for the mail. If publishing fails, the OTP is discarded.
+            final String redisKey = otpKey(loginId, mobileNo);
+            kafkaEventPublisher.publish(
+                    KafkaEventType.OTP_MAIL,
+                    loginId,
+                    new OtpMailEvent(loginId, email.trim(), user.getName(), otp, (int) OTP_TTL.toMinutes()),
+                    () -> redisTemplate.delete(redisKey));
+
+            response.setResponseOutput("OTP sent.");
+            response.setHeader("Success");
+            response.setMessage("OTP is being sent to " + maskEmail(email.trim()) + ". It is valid for "
+                    + OTP_TTL.toMinutes() + " minutes.");
+            response.setStatusCode(200);
+            return response;
+        } catch (CustomException e) {
+            response.setHeader(e.getHeader());
+            response.setMessage(e.getMessage());
+            response.setStatusCode(e.getStatusCode());
+            return response;
+        } catch (Exception e) {
+            response.setHeader("OTP failed");
+            response.setMessage("Could not generate the OTP. " + e.getMessage());
+            response.setStatusCode(500);
+            return response;
+        }
+    }
+
+    public ResponseMessage<String> verifyOtp(String loginId, String mobileNo, String otp) {
+        ResponseMessage<String> response = new ResponseMessage<>();
+        try {
+            if (loginId == null || loginId.isBlank() || mobileNo == null || mobileNo.isBlank()
+                    || otp == null || otp.isBlank()) {
+                throw new CustomException("Missing data.", "Login id, mobile number and OTP are required.", 400);
+            }
+            loginId = loginId.trim();
+            mobileNo = mobileNo.trim();
+            otp = otp.trim();
+
+            String key = otpKey(loginId, mobileNo);
+            String attemptsKey = otpAttemptsKey(loginId, mobileNo);
+
+            String stored = redisTemplate.opsForValue().get(key);
+            if (stored == null) {
+                throw new CustomException("OTP expired.", "OTP has expired or was not requested. Please request a new one.", 400);
+            }
+
+            // Limit wrong guesses (a 6-digit OTP is easy to brute-force otherwise)
+            Long attempts = redisTemplate.opsForValue().increment(attemptsKey);
+            if (attempts != null && attempts == 1) {
+                redisTemplate.expire(attemptsKey, OTP_TTL);
+            }
+            if (attempts != null && attempts > MAX_OTP_ATTEMPTS) {
+                redisTemplate.delete(key);
+                redisTemplate.delete(attemptsKey);
+                throw new CustomException("Too many attempts.", "Too many wrong attempts. Please request a new OTP.", 429);
+            }
+
+            String realOtp = AESUtils.decrypt(stored);
+            boolean matches = MessageDigest.isEqual(
+                    realOtp.getBytes(StandardCharsets.UTF_8),
+                    otp.getBytes(StandardCharsets.UTF_8));
+            if (!matches) {
+                throw new CustomException("Invalid OTP.", "The OTP you entered is incorrect.", 400);
+            }
+
+            // One-time use
+            redisTemplate.delete(key);
+            redisTemplate.delete(attemptsKey);
+
+            response.setResponseOutput("Verified.");
+            response.setHeader("Success");
+            response.setMessage("OTP verified successfully.");
+            response.setStatusCode(200);
+            return response;
+        } catch (CustomException e) {
+            response.setHeader(e.getHeader());
+            response.setMessage(e.getMessage());
+            response.setStatusCode(e.getStatusCode());
+            return response;
+        } catch (Exception e) {
+            response.setHeader("Verify failed");
+            response.setMessage("Could not verify the OTP. " + e.getMessage());
             response.setStatusCode(500);
             return response;
         }
