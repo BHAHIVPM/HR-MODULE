@@ -18,7 +18,7 @@ public class OtpMailProducer {
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final JsonMapper jsonMapper;
 
-    @Value("${app.kafka.otp-mail-topic}")
+    @Value("${app.kafka.otp-mail-topic:otp-mail-topic}")
     private String topic;
 
     /**

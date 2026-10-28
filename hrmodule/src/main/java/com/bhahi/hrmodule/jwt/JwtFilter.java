@@ -37,7 +37,8 @@ public class JwtFilter extends OncePerRequestFilter {
         return "POST".equalsIgnoreCase(request.getMethod())
                 && (uri.startsWith("/auth/login/")
                     || uri.startsWith("/auth/guest-token/")
-                    || uri.startsWith("/auth/refresh-token/"));
+                    || uri.startsWith("/auth/refresh-token/")
+                    || uri.equals("/auth/logout"));
     }
 
     @Override
