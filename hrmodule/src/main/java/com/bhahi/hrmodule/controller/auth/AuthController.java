@@ -88,4 +88,10 @@ public class AuthController {
         return ResponseEntity.status(200).body(LocalDateTime.now(ZoneOffset.UTC).toString());
     }
 
+    @PostMapping("/logout")
+    public ResponseEntity<ResponseMessage<String>> logout(HttpServletResponse response) {
+        ResponseMessage<String> result = authService.logout(response);
+        return ResponseEntity.status(result.getStatusCode()).body(result);
+    }
+
 }

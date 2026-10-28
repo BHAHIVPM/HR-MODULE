@@ -60,6 +60,7 @@ public class SecurityConfig {
                               "/auth/guest-token/**",
                               "/auth/refresh-token/**",
                               "/auth/ping-me",
+                              "/auth/logout",
 //                            "/swagger-ui/**",
 //                            "/swagger-ui.html",
 //                            "/v3/api-docs/**",

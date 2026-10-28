@@ -374,6 +374,39 @@ public class AuthService {
     }
 
     // ==============================================================================================================
+    // LOGOUT — clears Access_token and Guest_Token cookies
+    // ==============================================================================================================
+    public ResponseMessage<String> logout(HttpServletResponse response) {
+        ResponseMessage<String> result = new ResponseMessage<>();
+        try {
+            clearTokenCookie(response, "Access_token");
+            clearTokenCookie(response, "Guest_Token");
+
+            result.setResponseOutput("Logged out successfully.");
+            result.setHeader("Success");
+            result.setMessage("Logged out successfully.");
+            result.setStatusCode(200);
+            return result;
+        } catch (Exception e) {
+            result.setHeader("Logout failed");
+            result.setMessage("Something went wrong while logging out.");
+            result.setStatusCode(500);
+            return result;
+        }
+    }
+
+    private void clearTokenCookie(HttpServletResponse response, String name) {
+        ResponseCookie cookie = ResponseCookie.from(name, "")
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("None")
+                .path("/")
+                .maxAge(0)
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+    }
+
+    // ==============================================================================================================
 // VERIFY TEMP PASSWORD — loginId + tempPassword -> confirms the temp password issued at creation is correct.
 // This is the "prove who you are" step before changePassword, since a new account has no real password yet.
 // ==============================================================================================================
