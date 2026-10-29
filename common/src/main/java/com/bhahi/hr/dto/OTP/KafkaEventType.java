@@ -6,5 +6,12 @@ package com.bhahi.hr.dto.OTP;
  * publish it from hrmodule, and add one case in the hrmod consumer.
  */
 public enum KafkaEventType {
-    OTP_MAIL
+    OTP_MAIL,
+    CANDIDATE_NOTIFICATION,
+    EXPENSE_APPROVAL,
+    TRAINING_ASSIGNMENT,
+    BENEFIT_ENROLLMENT,
+    EXIT_CLEARANCE,
+    HELPDESK_TICKET,
+    CULTURE_BROADCAST
 }
