@@ -3,6 +3,13 @@ package com.bhahi.hr.service.imple.communication;
 import com.bhahi.hr.dto.OTP.KafkaEventType;
 import com.bhahi.hr.dto.OTP.KafkaTopics;
 import com.bhahi.hr.dto.OTP.OtpMailEvent;
+import com.bhahi.hr.dto.benefits.BenefitEnrollmentEvent;
+import com.bhahi.hr.dto.culture.CultureBroadcastEvent;
+import com.bhahi.hr.dto.exit.ExitClearanceEvent;
+import com.bhahi.hr.dto.expense.ExpenseApprovalEvent;
+import com.bhahi.hr.dto.helpdesk.HelpdeskTicketEvent;
+import com.bhahi.hr.dto.recruitment.CandidateNotificationEvent;
+import com.bhahi.hr.dto.training.TrainingAssignmentEvent;
 import com.bhahi.hr.service.inter.communication.IMailMethods;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,11 +42,112 @@ public class HrEventConsumer {
         try {
             switch (type) {
                 case OTP_MAIL -> handleOtpMail(record);
+                case CANDIDATE_NOTIFICATION -> handleCandidateNotification(record);
+                case EXPENSE_APPROVAL -> handleExpenseApproval(record);
+                case TRAINING_ASSIGNMENT -> handleTrainingAssignment(record);
+                case BENEFIT_ENROLLMENT -> handleBenefitEnrollment(record);
+                case EXIT_CLEARANCE -> handleExitClearance(record);
+                case HELPDESK_TICKET -> handleHelpdeskTicket(record);
+                case CULTURE_BROADCAST -> handleCultureBroadcast(record);
             }
         } catch (Exception e) {
             // The payload is never logged, it can contain an OTP.
             log.error("Could not process {} event, key={}", type, record.key(), e);
         }
+    }
+
+    private void handleCultureBroadcast(ConsumerRecord<String, String> record) {
+        CultureBroadcastEvent event = jsonMapper.readValue(record.value(), CultureBroadcastEvent.class);
+        mailMethods.cultureBroadcastNotificationMail(
+                event.announcementId() != null ? event.announcementId().toString() : "0",
+                event.title(),
+                event.targetDepartment(),
+                event.messageType(),
+                event.authorEmail(),
+                event.broadcastDate()
+        );
+        log.info("Processed culture broadcast notification for announcementId={}, title={}", event.announcementId(), event.title());
+    }
+
+    private void handleHelpdeskTicket(ConsumerRecord<String, String> record) {
+        HelpdeskTicketEvent event = jsonMapper.readValue(record.value(), HelpdeskTicketEvent.class);
+        mailMethods.helpdeskTicketNotificationMail(
+                event.creatorEmail(),
+                event.ticketId(),
+                event.employeeId(),
+                event.category(),
+                event.subject(),
+                event.priority(),
+                event.status()
+        );
+        log.info("Processed helpdesk ticket notification for ticketId={}, category={}", event.ticketId(), event.category());
+    }
+
+    private void handleExitClearance(ConsumerRecord<String, String> record) {
+        ExitClearanceEvent event = jsonMapper.readValue(record.value(), ExitClearanceEvent.class);
+        mailMethods.exitClearanceNotificationMail(
+                event.employeeEmail(),
+                event.exitId(),
+                event.employeeId(),
+                event.resignationDate(),
+                event.lastWorkingDay(),
+                event.clearanceDepartment(),
+                event.status()
+        );
+        log.info("Processed exit clearance notification for exitId={}, employeeId={}", event.exitId(), event.employeeId());
+    }
+
+    private void handleBenefitEnrollment(ConsumerRecord<String, String> record) {
+        BenefitEnrollmentEvent event = jsonMapper.readValue(record.value(), BenefitEnrollmentEvent.class);
+        mailMethods.benefitEnrollmentNotificationMail(
+                event.employeeEmail(),
+                event.enrollmentId(),
+                event.employeeId(),
+                event.planType(),
+                event.planName(),
+                event.effectiveDate(),
+                event.status()
+        );
+        log.info("Processed benefit enrollment notification for enrollmentId={}, planName={}", event.enrollmentId(), event.planName());
+    }
+
+    private void handleTrainingAssignment(ConsumerRecord<String, String> record) {
+        TrainingAssignmentEvent event = jsonMapper.readValue(record.value(), TrainingAssignmentEvent.class);
+        mailMethods.trainingAssignmentNotificationMail(
+                event.employeeEmail(),
+                event.enrollmentId(),
+                event.employeeId(),
+                event.courseName(),
+                event.dueDate(),
+                event.reminderType()
+        );
+        log.info("Processed training assignment notification for enrollmentId={}, courseId={}", event.enrollmentId(), event.courseId());
+    }
+
+    private void handleExpenseApproval(ConsumerRecord<String, String> record) {
+        ExpenseApprovalEvent event = jsonMapper.readValue(record.value(), ExpenseApprovalEvent.class);
+        mailMethods.expenseApprovalNotificationMail(
+                event.managerEmail(),
+                event.claimId(),
+                event.employeeId(),
+                event.amount(),
+                event.currency(),
+                event.status(),
+                event.description()
+        );
+        log.info("Processed expense approval notification for claimId={}, status={}", event.claimId(), event.status());
+    }
+
+    private void handleCandidateNotification(ConsumerRecord<String, String> record) {
+        CandidateNotificationEvent event = jsonMapper.readValue(record.value(), CandidateNotificationEvent.class);
+        mailMethods.candidateNotificationMail(
+                event.email(),
+                event.candidateName(),
+                event.jobTitle(),
+                event.stage(),
+                event.templateType()
+        );
+        log.info("Processed candidate notification for candidateId={}, stage={}", event.candidateId(), event.stage());
     }
 
     private void handleOtpMail(ConsumerRecord<String, String> record) {
